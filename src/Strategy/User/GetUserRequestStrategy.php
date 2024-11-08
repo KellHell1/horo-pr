@@ -15,7 +15,7 @@ readonly class GetUserRequestStrategy implements UserRequestStrategyInterface
 
     public function execute(Request $request, UserBadge $user): JsonResponse
     {
-        $id = $request->query->get('id');
+        $id = (int) $request->query->get('id');
 
         if (!in_array($user->getId() !== $id && User::ROLE_ADMIN, $user->getRoles())) {
             return new JsonResponse(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);

@@ -17,7 +17,6 @@ readonly class PutUserRequestStrategy implements UserRequestStrategyInterface
     public function execute(Request $request, UserBadge $user): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
-        $id = $data['id'];
 
         $user = $this->userRepository->findOneBy([
             'login' => $data['id'],
@@ -27,6 +26,8 @@ readonly class PutUserRequestStrategy implements UserRequestStrategyInterface
         if (!$user) {
             return new JsonResponse(['error' => 'User not found'], 404);
         }
+
+        $id = $data['id'];
 
         if ($user->getId() !== $id && !in_array(User::ROLE_ADMIN, $user->getRoles())) {
             return new JsonResponse(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);

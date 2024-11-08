@@ -10,10 +10,7 @@ use SensitiveParameter;
 
 readonly class AuthService
 {
-    public function __construct(
-        private UserRepository $userRepository,
-        private TokenService $tokenService,
-    ) {}
+    public function __construct(private UserRepository $userRepository) {}
 
     public function getByCredentials(string $login, #[SensitiveParameter] string $password): ?User
     {
@@ -21,10 +18,5 @@ readonly class AuthService
             'login' => $login,
             'pass' => $password,
         ]);
-    }
-
-    public function createToken(User $user): ?string
-    {
-        return $this->tokenService->create($user);
     }
 }

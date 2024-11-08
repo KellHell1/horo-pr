@@ -21,32 +21,23 @@ class TokenService
             throw new \InvalidArgumentException('User must have an id.');
         }
 
-        $header = json_encode(['alg' => 'HS256', 'typ' => 'JWT'], JSON_THROW_ON_ERROR);
-        $payload = json_encode([
-            self::ID_KEY => $user->getId(),
-            self::EXPIRE_KEY => time() + self::TTL,
-        ], JSON_THROW_ON_ERROR);
+        $header = $this->encodeHeader();
+        $payload = $this->encodePayload($user);
 
-        $base64UrlHeader = rtrim(strtr(base64_encode($header), '+/', '-_'), '=');
-        $base64UrlPayload = rtrim(strtr(base64_encode($payload), '+/', '-_'), '=');
+        $signature = $this->generateSignature($header, $payload);
 
-        $signature = hash_hmac('sha256', $base64UrlHeader . '.' . $base64UrlPayload, $this->secretKey, true);
-        $base64UrlSignature = rtrim(strtr(base64_encode($signature), '+/', '-_'), '=');
-
-        return $base64UrlHeader . '.' . $base64UrlPayload . '.' . $base64UrlSignature;
+        return $header . '.' . $payload . '.' . $signature;
     }
 
     public function getUserId(string $token): ?int
     {
         $userId = null;
 
-        $parts = explode('.', $token);
-        if (count($parts) === 3) {
-            if ($this->validate($token)) {
-                $payload = json_decode(base64_decode($parts[1]), true, 512, JSON_THROW_ON_ERROR);
+        if ($this->validate($token)) {
+            $parts = explode('.', $token);
+            $payload = json_decode(base64_decode($parts[1]), true, 512, JSON_THROW_ON_ERROR);
 
-                $userId = $payload[self::ID_KEY] ?? null;
-            }
+            $userId = $payload[self::ID_KEY] ?? null;
         }
 
         return $userId;
@@ -59,17 +50,48 @@ class TokenService
             return false;
         }
 
-        list($base64UrlHeader, $base64UrlPayload, $base64UrlSignature) = $parts;
+        [$base64UrlHeader, $base64UrlPayload, $base64UrlSignature] = $parts;
 
-        $signature = hash_hmac('sha256', $base64UrlHeader . '.' . $base64UrlPayload, $this->secretKey, true);
-        $base64UrlSignatureCheck = rtrim(strtr(base64_encode($signature), '+/', '-_'), '=');
-
-        if ($base64UrlSignature !== $base64UrlSignatureCheck) {
+        if (!$this->isValidSignature($base64UrlHeader, $base64UrlPayload, $base64UrlSignature)) {
             return false;
         }
 
-        $payload = json_decode(base64_decode($base64UrlPayload), true, 512, JSON_THROW_ON_ERROR);
+        return $this->isNotExpired($base64UrlPayload);
+    }
 
-        return isset($payload[self::EXPIRE_KEY]) && ($payload[self::EXPIRE_KEY] > time());
+    private function encodeHeader(): string
+    {
+        return rtrim(strtr(base64_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT'], JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
+    }
+
+    private function encodePayload(User $user): string
+    {
+        $payload = json_encode([
+            self::ID_KEY => $user->getId(),
+            self::EXPIRE_KEY => time() + self::TTL,
+        ], JSON_THROW_ON_ERROR);
+
+        return rtrim(strtr(base64_encode($payload), '+/', '-_'), '=');
+    }
+
+    private function generateSignature(string $header, string $payload): string
+    {
+        $signature = hash_hmac('sha256', $header . '.' . $payload, $this->secretKey, true);
+
+        return rtrim(strtr(base64_encode($signature), '+/', '-_'), '=');
+    }
+
+    private function isValidSignature(string $header, string $payload, string $signature): bool
+    {
+        $expectedSignature = $this->generateSignature($header, $payload);
+
+        return $signature === $expectedSignature;
+    }
+
+    private function isNotExpired(string $payload): bool
+    {
+        $decodedPayload = json_decode(base64_decode($payload), true, 512, JSON_THROW_ON_ERROR);
+
+        return isset($decodedPayload[self::EXPIRE_KEY]) && ($decodedPayload[self::EXPIRE_KEY] > time());
     }
 }

@@ -6,7 +6,7 @@ namespace App\Strategy\User;
 
 use App\Entity\User;
 use App\Service\UserService;
-use Symfony\Component\HttpFoundation\{JsonResponse, Request};
+use Symfony\Component\HttpFoundation\{JsonResponse, Request, Response};
 use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge;
 
 readonly class PostUserRequestStrategy implements UserRequestStrategyInterface
@@ -18,7 +18,7 @@ readonly class PostUserRequestStrategy implements UserRequestStrategyInterface
         $data = json_decode($request->getContent(), true);
 
         if ($user->getId() !== $data['id'] && !in_array(User::ROLE_ADMIN, $user->getRoles())) {
-            return new JsonResponse(['error' => 'Access denied'], JsonResponse::HTTP_FORBIDDEN);
+            return new JsonResponse(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
         }
 
         return $this->userService->create($data);
