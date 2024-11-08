@@ -36,6 +36,12 @@ class User
         return $this->id;
     }
 
+    public function setId(mixed $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
+
     public function getLogin(): string
     {
         return $this->login;
