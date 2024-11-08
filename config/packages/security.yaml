@@ -1,0 +1,21 @@
+security:
+    providers:
+        app_user_provider:
+            entity:
+                class: App\Entity\User
+                property: id
+
+    firewalls:
+        api_v1:
+            pattern: ^/v1/api/users
+            stateless: true
+            logout: false
+            access_token:
+                token_handler: App\Security\AccessHandler
+
+    access_control:
+        - { path: ^/v1/api/users, roles: [ !php/const App\Entity\User::ROLE_USER ] }
+
+    role_hierarchy:
+        !php/const App\Entity\User::ROLE_ADMIN:
+            - !php/const App\Entity\User::ROLE_USER

@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Controller;
+declare(strict_types=1);
 
+namespace App\Controller;
 
 use App\Strategy\User\{
     DeleteUserRequestStrategy,
@@ -13,14 +14,15 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{JsonResponse, Request};
 use Symfony\Component\Routing\Attribute\Route;
 
-class UserController extends AbstractController {
+class UserController extends AbstractController
+{
     private array $strategies;
 
     public function __construct(
         PostUserRequestStrategy $postStrategy,
         GetUserRequestStrategy $getStrategy,
         PutUserRequestStrategy $putStrategy,
-        DeleteUserRequestStrategy $deleteStrategy
+        DeleteUserRequestStrategy $deleteStrategy,
     ) {
         $this->strategies = [
             'POST' => $postStrategy,
@@ -34,6 +36,7 @@ class UserController extends AbstractController {
     public function users(Request $request): JsonResponse
     {
         $method = $request->getMethod();
+        $user = $this->getUser();
 
         if (!isset($this->strategies[$method])) {
             return new JsonResponse(['error' => 'Method not allowed'], 405);
@@ -41,6 +44,6 @@ class UserController extends AbstractController {
 
         $strategy = $this->strategies[$method];
 
-        return $strategy->execute($request);
+        return $strategy->execute($request, $user);
     }
 }

@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Service;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 readonly class UserService
 {
@@ -22,7 +24,12 @@ readonly class UserService
             return new JsonResponse(['error' => 'Missing required fields'], 400);
         }
 
-        $user = new User();
+        $existingUser = $this->userRepository->findOneBy(['login' => $data['login'], 'pass' => $data['pass']]);
+        if ($existingUser) {
+            return new JsonResponse(['error' => 'User with this login and pass already exists'], 400);
+        }
+
+        $user = new User($data['login'], null, $data);
         $user->setId($data['id']);
         $user->setLogin($data['login']);
         $user->setPhone($data['phone']);
@@ -31,11 +38,6 @@ readonly class UserService
         $errors = $this->validator->validate($user);
         if (count($errors) > 0) {
             return new JsonResponse(['error' => (string) $errors], 400);
-        }
-
-        $existingUser = $this->userRepository->findOneBy(['login' => $data['login'], 'pass' => $data['pass']]);
-        if ($existingUser) {
-            return new JsonResponse(['error' => 'User with this login and pass already exists'], 400);
         }
 
         $this->entityManager->persist($user);
